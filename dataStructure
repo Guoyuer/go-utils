@@ -1,0 +1,32 @@
+func RemoveDuplicateInArray(in interface{}) error {
+	////remove in-place duplicate elements in an array or slice
+	//elements' type cannot be slice, map, or function
+	type placeHolder struct{}
+	var pseudo placeHolder
+	set := make(map[interface{}]placeHolder)
+	pointerOfIn := reflect.ValueOf(in)
+	dataOfIn := reflect.Indirect(pointerOfIn)
+	if pointerOfIn.Kind() != reflect.Ptr {
+		return errors.New("need a ptr")
+	}
+	switch dataOfIn.Kind() {
+	case reflect.Slice, reflect.Array:
+		if dataOfIn.Len() == 0 {
+			return nil
+		}
+		newSliceData := reflect.MakeSlice(pointerOfIn.Type().Elem(), 0, dataOfIn.Len())
+		for i := 0; i < dataOfIn.Len(); i++ {
+			//if already met
+			if _, ok := set[dataOfIn.Index(i).Interface()]; ok {
+				continue
+			} else {
+				set[dataOfIn.Index(i).Interface()] = pseudo
+				newSliceData = reflect.Append(newSliceData, dataOfIn.Index(i))
+			}
+		}
+		dataOfIn.Set(newSliceData)
+	default:
+		return errors.New("not a slice or array")
+	}
+	return nil
+}
