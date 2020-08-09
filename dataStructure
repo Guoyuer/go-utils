@@ -1,32 +1,57 @@
-func RemoveDuplicateInArray(in interface{}) error {
-	////remove in-place duplicate elements in an array or slice
-	//elements' type cannot be slice, map, or function
-	type placeHolder struct{}
-	var pseudo placeHolder
-	set := make(map[interface{}]placeHolder)
-	pointerOfIn := reflect.ValueOf(in)
-	dataOfIn := reflect.Indirect(pointerOfIn)
-	if pointerOfIn.Kind() != reflect.Ptr {
-		return errors.New("need a ptr")
+func RemoveDuplicate(in interface{}) error {
+	// 功能：移除切片中的重复元素
+	// 限制：
+	// 1、切片中元素的类型必须可哈希（可比较），因此不能为：
+	// 字典、切片、函数，或是含有这三种类型的结构体或数组
+	// 2、必须传入切片的地址，而不是切片本身
+	// 不遵循限制将会导致去重无效且返回错误
+	var pseudo struct{}
+	set := make(map[interface{}]struct{})
+	pIn := reflect.ValueOf(in)
+	vIn := reflect.Indirect(pIn)
+	if !vIn.CanSet() {
+		s := fmt.Sprintf("value cannot be set. Please pass the address of the slice.")
+		return errors.New(s)
 	}
-	switch dataOfIn.Kind() {
-	case reflect.Slice, reflect.Array:
-		if dataOfIn.Len() == 0 {
+	if vIn.Kind() == reflect.Slice {
+		if vIn.Len() == 0 {
 			return nil
 		}
-		newSliceData := reflect.MakeSlice(pointerOfIn.Type().Elem(), 0, dataOfIn.Len())
-		for i := 0; i < dataOfIn.Len(); i++ {
+		//fmt.Println(pIn.Type().Elem())
+		newV := reflect.MakeSlice(pIn.Type().Elem(), 0, vIn.Len())
+		tOfElem := pIn.Elem().Type().Elem()
+		if !tOfElem.Comparable() {
+			s := fmt.Sprintf("the element's type is %s, which is not comparable", tOfElem.String())
+			return errors.New(s)
+		}
+		for i := 0; i < vIn.Len(); i++ {
 			//if already met
-			if _, ok := set[dataOfIn.Index(i).Interface()]; ok {
+			if _, ok := set[vIn.Index(i).Interface()]; ok {
 				continue
 			} else {
-				set[dataOfIn.Index(i).Interface()] = pseudo
-				newSliceData = reflect.Append(newSliceData, dataOfIn.Index(i))
+				set[vIn.Index(i).Interface()] = pseudo
+				newV = reflect.Append(newV, vIn.Index(i))
 			}
 		}
-		dataOfIn.Set(newSliceData)
-	default:
-		return errors.New("not a slice or array")
+		vIn.Set(newV)
+	} else {
+		return errors.New("not a slice")
 	}
 	return nil
 }
+
+func InArray(value interface{}, container interface{}) bool {
+	//判断value是否在array/slice里
+	vContainer := reflect.ValueOf(container)
+	tContainer := reflect.TypeOf(container)
+	switch tContainer.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < vContainer.Len(); i++ {
+			if reflect.DeepEqual(value, vContainer.Index(i).Interface()) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
