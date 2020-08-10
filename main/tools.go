@@ -1,10 +1,18 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"reflect"
+)
+
+//功能：移除切片中的重复元素，剩下元素保持原有顺序
+//限制：
+//1、切片中元素的类型必须可哈希（可比较），因此不能为：
+//字典、切片、函数，或是含有这三种类型的结构体或数组
+//2、必须传入切片的地址，而不是切片本身
+//不遵循限制将会导致去重无效且返回错误
 func RemoveDuplicate(in interface{}) error {
-	// 功能：移除切片中的重复元素
-	// 限制：
-	// 1、切片中元素的类型必须可哈希（可比较），因此不能为：
-	// 字典、切片、函数，或是含有这三种类型的结构体或数组
-	// 2、必须传入切片的地址，而不是切片本身
-	// 不遵循限制将会导致去重无效且返回错误
 	var pseudo struct{}
 	set := make(map[interface{}]struct{})
 	pIn := reflect.ValueOf(in)
@@ -40,18 +48,21 @@ func RemoveDuplicate(in interface{}) error {
 	return nil
 }
 
-func InArray(value interface{}, container interface{}) bool {
-	//判断value是否在array/slice里
-	vContainer := reflect.ValueOf(container)
-	tContainer := reflect.TypeOf(container)
-	switch tContainer.Kind() {
+//判断value是否在array/slice里
+//只允许array或是slice，否则会报错
+func InSlice(value interface{}, container interface{}) (bool, error) {
+	s := reflect.ValueOf(container)
+	switch reflect.TypeOf(container).Kind() {
 	case reflect.Slice, reflect.Array:
-		for i := 0; i < vContainer.Len(); i++ {
-			if reflect.DeepEqual(value, vContainer.Index(i).Interface()) {
-				return true
+		for i := 0; i < s.Len(); i++ {
+			if reflect.DeepEqual(value, s.Index(i).Interface()) {
+				return true, nil
 			}
 		}
+	default:
+		//	如果不是slice或者array类型
+		err := errors.New("you can only pass slice, array")
+		return false, err
 	}
-	return false
+	return false, nil
 }
-
